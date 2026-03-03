@@ -187,13 +187,11 @@ Response:
 - **Frontend**: HTML5, CSS3, JavaScript
 - **Data Processing**: NumPy, Pandas
 
-## License
 
-MIT License - See LICENSE file for details
 
 ## Author
 
-Created with ❤️ for Explainable AI in Network Security
+Created with ❤️ 😌for Explainable AI in Network Security
 
 ## Contact
 
