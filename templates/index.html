@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explainable IDS System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🛡️ Explainable IDS System</h1>
+            <p>Intrusion Detection with AI Explainability (LIME & SHAP)</p>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Left Panel: Prediction -->
+            <div class="panel prediction-panel">
+                <h2>🔍 Prediction</h2>
+                
+                <div class="form-group">
+                    <label for="sequence">Enter Syscall Sequence:</label>
+                    <textarea id="sequence" placeholder="e.g., 76 104 47 43 148 93 144 78 7 70..." rows="4"></textarea>
+                    <small>Space-separated syscall IDs</small>
+                </div>
+
+                <div class="button-group">
+                    <button id="predictBtn" class="btn btn-primary">Predict</button>
+                    <button id="exampleBtn" class="btn btn-secondary">Load Example</button>
+                </div>
+
+                <!-- Results -->
+                <div id="results" class="results hidden">
+                    <div class="result-card" id="resultCard">
+                        <div class="prediction-result">
+                            <h3>Prediction: <span id="predictionLabel">-</span></h3>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" id="confidenceFill"></div>
+                            </div>
+                            <p>Confidence: <span id="confidence">0</span>%</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Explanations -->
+            <div class="panel explanation-panel">
+                <h2>📊 LIME Explanation</h2>
+                <div id="limeResults" class="lime-results hidden">
+                    <div id="limeFeatures" class="features-list">
+                        <!-- Features will be inserted here -->
+                    </div>
+                </div>
+                <p id="limePlaceholder" class="placeholder">Make a prediction to see feature importance</p>
+            </div>
+        </div>
+
+        <!-- Model Info Section -->
+        <div class="panel model-info-panel">
+            <h2>📈 Model Information</h2>
+            <div id="modelStats" class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-label">Accuracy</span>
+                    <span class="stat-value" id="accuracy">-</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Precision</span>
+                    <span class="stat-value" id="precision">-</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Recall</span>
+                    <span class="stat-value" id="recall">-</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">F1-Score</span>
+                    <span class="stat-value" id="f1score">-</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Features</span>
+                    <span class="stat-value" id="features">-</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Total Samples</span>
+                    <span class="stat-value" id="samples">-</span>
+                </div>
+            </div>
+
+            <div class="confusion-matrix-container">
+                <h3>Confusion Matrix</h3>
+                <table class="confusion-matrix" id="confusionMatrix">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Normal</th>
+                            <th>Attack</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cmBody">
+                        <tr>
+                            <td>Normal</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>Attack</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="spinner" class="spinner hidden">
+        <div class="spinner-circle"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
