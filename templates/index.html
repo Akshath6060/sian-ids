@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Explainable IDS System</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -110,6 +111,30 @@
                         </tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- Model Visualizations -->
+        <div class="panel graphs-panel">
+            <h2>📈 Model Visualizations</h2>
+            <div class="graphs-container">
+                <!-- Training History -->
+                <div class="graph-section">
+                    <h3>Training History</h3>
+                    <canvas id="trainingHistoryChart"></canvas>
+                </div>
+
+                <!-- ROC Curve -->
+                <div class="graph-section">
+                    <h3>ROC Curve</h3>
+                    <canvas id="rocCurveChart"></canvas>
+                </div>
+
+                <!-- Precision-Recall Curve -->
+                <div class="graph-section">
+                    <h3>Precision-Recall Curve</h3>
+                    <canvas id="prCurveChart"></canvas>
+                </div>
             </div>
         </div>
     </div>

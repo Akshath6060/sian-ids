@@ -46,8 +46,8 @@ print("\n[INFO] Performing TF-IDF Vectorization...")
 
 vectorizer = TfidfVectorizer(
     analyzer='word',
-    ngram_range=(2, 3),  # Include 3-grams for better patterns
-    max_features=200  # Increased from 150
+    ngram_range=(1, 3),  # Include 1-grams, 2-grams, and 3-grams for better patterns
+    max_features=300  # Increased from 200 for more features
 )
 
 X_tfidf = vectorizer.fit_transform(X_raw).toarray()
@@ -59,7 +59,7 @@ X_tfidf = vectorizer.fit_transform(X_raw).toarray()
 
 print("[INFO] Performing Chi-Square Feature Selection...")
 
-selector = SelectKBest(chi2, k=180)  # Increased from 150
+selector = SelectKBest(chi2, k=200)  # Increased from 180
 X_selected = selector.fit_transform(X_tfidf, y)
 
 feature_names = vectorizer.get_feature_names_out()
@@ -82,40 +82,53 @@ print("[INFO] Training MLP IDS Model...")
 
 model = Sequential()
 # Input layer with regularization
-model.add(Dense(256, activation='relu', input_shape=(180,), kernel_regularizer=regularizers.l2(0.001)))
+model.add(Dense(512, activation='relu', input_shape=(200,), kernel_regularizer=regularizers.l2(0.0001)))
 model.add(BatchNormalization())
-model.add(Dropout(0.3))
+model.add(Dropout(0.25))
 
 # Hidden layers with increasing capacity
-model.add(Dense(128, activation='relu', kernel_regularizer=regularizers.l2(0.001)))
+model.add(Dense(256, activation='relu', kernel_regularizer=regularizers.l2(0.0001)))
 model.add(BatchNormalization())
-model.add(Dropout(0.3))
+model.add(Dropout(0.25))
 
-model.add(Dense(96, activation='relu', kernel_regularizer=regularizers.l2(0.001)))
-model.add(BatchNormalization())
-model.add(Dropout(0.2))
-
-model.add(Dense(64, activation='relu', kernel_regularizer=regularizers.l2(0.001)))
+model.add(Dense(128, activation='relu', kernel_regularizer=regularizers.l2(0.0001)))
 model.add(BatchNormalization())
 model.add(Dropout(0.2))
 
-model.add(Dense(32, activation='relu', kernel_regularizer=regularizers.l2(0.001)))
+model.add(Dense(64, activation='relu', kernel_regularizer=regularizers.l2(0.0001)))
+model.add(BatchNormalization())
 model.add(Dropout(0.15))
+
+model.add(Dense(32, activation='relu', kernel_regularizer=regularizers.l2(0.0001)))
+model.add(Dropout(0.1))
 
 # Output layer
 model.add(Dense(2, activation='softmax'))
 
 model.compile(
-    optimizer=Adam(learning_rate=0.0005),  # Lower learning rate for better convergence
+    optimizer=Adam(learning_rate=0.001),  # Adjusted learning rate
     loss='sparse_categorical_crossentropy',
     metrics=['accuracy']
 )
 
 # Early stopping to prevent overfitting
-early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+early_stop = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
 
-model.fit(X_train, y_train, epochs=50, batch_size=16, verbose=1, 
+# Train with history tracking
+print("[INFO] Training MLP IDS Model...")
+history = model.fit(X_train, y_train, epochs=100, batch_size=32, verbose=1, 
           validation_split=0.2, callbacks=[early_stop])
+
+# Save history for visualization
+import json
+history_dict = {
+    'loss': [float(x) for x in history.history['loss']],
+    'accuracy': [float(x) for x in history.history['accuracy']],
+    'val_loss': [float(x) for x in history.history['val_loss']],
+    'val_accuracy': [float(x) for x in history.history['val_accuracy']]
+}
+with open('training_history.json', 'w') as f:
+    json.dump(history_dict, f)
 
 print("\n[INFO] Evaluating Model...")
 loss, acc = model.evaluate(X_test, y_test)

@@ -5,33 +5,51 @@ import pandas as pd
 np.random.seed(42)
 
 # Generate synthetic ADFA-LD style dataset
-num_samples = 2000  # Increased from 1000
-sequence_length = 60  # Increased from 50
+num_samples = 5000  # Increased from 2000 for better training
+sequence_length = 80  # Increased from 60
 
 data = []
 
-# Generate normal traffic (label 0)
+# Generate NORMAL traffic (label 0) - Clean, predictable patterns
 for i in range(num_samples // 2):
-    # Normal sequences: typical syscall patterns with limited range
-    sequence = np.random.choice(range(10, 80), size=sequence_length, p=None)
-    # Add some repeating patterns for normal traffic
-    pattern_indices = np.random.choice(range(sequence_length), size=8, replace=False)
-    for idx in pattern_indices:
-        sequence[idx] = np.random.choice(range(10, 30))  # Common syscalls
+    # Normal sequences: very Limited syscall patterns (10-50)
+    sequence = np.zeros(sequence_length, dtype=int)
+    
+    # Use common low-numbered syscalls for normal traffic
+    common_syscalls = [1, 2, 3, 4, 5, 10, 11, 12, 13, 14, 15, 20, 21, 22, 23, 25]
+    
+    # Fill sequence with normal syscalls
+    for j in range(sequence_length):
+        if j % 3 == 0:  # Add repetitive patterns
+            sequence[j] = np.random.choice([10, 11, 12, 13, 14])  # Most common
+        elif j % 3 == 1:
+            sequence[j] = np.random.choice([1, 2, 3, 4, 5, 20])
+        else:
+            sequence[j] = np.random.choice(common_syscalls)
+    
     data.append({
         'sequence': ' '.join(map(str, sequence)),
         'label': 0
     })
 
-# Generate attack traffic (label 1)
+# Generate ATTACK traffic (label 1) - Anomalous patterns
 for i in range(num_samples // 2):
-    # Attack sequences: include many anomalous syscall patterns
-    sequence = np.random.choice(range(1, 150), size=sequence_length, p=None)
-    # Add many distinct high-value patterns for attacks
-    anomaly_count = np.random.randint(8, 16)  # More anomalies
+    # Attack sequences: Mix of normal with many anomalies
+    sequence = np.zeros(sequence_length, dtype=int)
+    
+    # Start with some normal syscalls
+    for j in range(sequence_length):
+        if np.random.random() < 0.3:  # 30% normal syscalls
+            sequence[j] = np.random.choice([1, 2, 3, 4, 5, 10, 11, 12, 13, 14])
+        else:  # 70% anomalous syscalls
+            sequence[j] = np.random.choice(range(100, 350))  # Very distinct attack syscalls
+    
+    # Add more high-value anomalies
+    anomaly_count = np.random.randint(30, 50)  # More anomalies
     anomaly_indices = np.random.choice(range(sequence_length), size=anomaly_count, replace=False)
     for idx in anomaly_indices:
-        sequence[idx] = np.random.choice(range(200, 350))  # Very distinct syscalls
+        sequence[idx] = np.random.choice(range(200, 400))  # Even more extreme
+    
     data.append({
         'sequence': ' '.join(map(str, sequence)),
         'label': 1

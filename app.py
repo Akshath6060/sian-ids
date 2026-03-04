@@ -2,10 +2,12 @@ import numpy as np
 import pandas as pd
 import joblib
 import os
+import json
 from flask import Flask, render_template, request, jsonify
 from tensorflow.keras.models import load_model
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_selection import SelectKBest, chi2
+from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_precision_score
 import lime.lime_tabular
 import warnings
 
@@ -46,13 +48,13 @@ def load_models():
             # TF-IDF Vectorization
             vectorizer = TfidfVectorizer(
                 analyzer='word',
-                ngram_range=(2, 3),
-                max_features=200
+                ngram_range=(1, 3),
+                max_features=300
             )
             X_tfidf = vectorizer.fit_transform(X_raw).toarray()
             
             # Feature Selection
-            selector = SelectKBest(chi2, k=180)
+            selector = SelectKBest(chi2, k=200)
             X_selected = selector.fit_transform(X_tfidf, y)
             
             # Train/Test Split
@@ -69,35 +71,35 @@ def load_models():
             from tensorflow.keras import regularizers
             
             model = Sequential()
-            model.add(Dense(256, activation='relu', input_shape=(180,), kernel_regularizer=regularizers.l2(0.001)))
+            model.add(Dense(512, activation='relu', input_shape=(200,), kernel_regularizer=regularizers.l2(0.0001)))
             model.add(BatchNormalization())
-            model.add(Dropout(0.3))
+            model.add(Dropout(0.25))
             
-            model.add(Dense(128, activation='relu', kernel_regularizer=regularizers.l2(0.001)))
+            model.add(Dense(256, activation='relu', kernel_regularizer=regularizers.l2(0.0001)))
             model.add(BatchNormalization())
-            model.add(Dropout(0.3))
+            model.add(Dropout(0.25))
             
-            model.add(Dense(96, activation='relu', kernel_regularizer=regularizers.l2(0.001)))
-            model.add(BatchNormalization())
-            model.add(Dropout(0.2))
-            
-            model.add(Dense(64, activation='relu', kernel_regularizer=regularizers.l2(0.001)))
+            model.add(Dense(128, activation='relu', kernel_regularizer=regularizers.l2(0.0001)))
             model.add(BatchNormalization())
             model.add(Dropout(0.2))
             
-            model.add(Dense(32, activation='relu', kernel_regularizer=regularizers.l2(0.001)))
+            model.add(Dense(64, activation='relu', kernel_regularizer=regularizers.l2(0.0001)))
+            model.add(BatchNormalization())
             model.add(Dropout(0.15))
+            
+            model.add(Dense(32, activation='relu', kernel_regularizer=regularizers.l2(0.0001)))
+            model.add(Dropout(0.1))
             
             model.add(Dense(2, activation='softmax'))
             
             model.compile(
-                optimizer=Adam(learning_rate=0.0005),
+                optimizer=Adam(learning_rate=0.001),
                 loss='sparse_categorical_crossentropy',
                 metrics=['accuracy']
             )
             
-            early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-            model.fit(X_train, y_train, epochs=50, batch_size=16, verbose=0, 
+            early_stop = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+            model.fit(X_train, y_train, epochs=100, batch_size=32, verbose=0, 
                      validation_split=0.2, callbacks=[early_stop])
             
             # Save models
@@ -235,6 +237,88 @@ def example_sequences():
         'normal': normal,
         'attack': attack
     })
+
+@app.route('/api/graphs/training-history', methods=['GET'])
+def training_history():
+    """Return training history for visualization"""
+    try:
+        if os.path.exists('training_history.json'):
+            with open('training_history.json', 'r') as f:
+                history = json.load(f)
+            return jsonify(history)
+        else:
+            return jsonify({
+                'loss': [],
+                'accuracy': [],
+                'val_loss': [],
+                'val_accuracy': []
+            })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/graphs/roc-curve', methods=['GET'])
+def roc_curve_data():
+    """Generate and return ROC curve data"""
+    try:
+        df = pd.read_csv("adfa_generated.csv")
+        X_raw = df["sequence"]
+        y = df["label"].values
+        
+        X_tfidf = vectorizer.transform(X_raw).toarray()
+        X_selected = selector.transform(X_tfidf)
+        
+        from sklearn.model_selection import train_test_split
+        _, X_test, _, y_test = train_test_split(
+            X_selected, y, test_size=0.2, random_state=42
+        )
+        
+        # Get predictions
+        y_pred_probs = model.predict(X_test, verbose=0)
+        y_pred_prob_positive = y_pred_probs[:, 1]
+        
+        # Calculate ROC curve
+        fpr, tpr, _ = roc_curve(y_test, y_pred_prob_positive)
+        roc_auc = auc(fpr, tpr)
+        
+        return jsonify({
+            'fpr': fpr.tolist(),
+            'tpr': tpr.tolist(),
+            'auc': float(roc_auc)
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/graphs/precision-recall', methods=['GET'])
+def precision_recall_data():
+    """Generate and return Precision-Recall curve data"""
+    try:
+        df = pd.read_csv("adfa_generated.csv")
+        X_raw = df["sequence"]
+        y = df["label"].values
+        
+        X_tfidf = vectorizer.transform(X_raw).toarray()
+        X_selected = selector.transform(X_tfidf)
+        
+        from sklearn.model_selection import train_test_split
+        _, X_test, _, y_test = train_test_split(
+            X_selected, y, test_size=0.2, random_state=42
+        )
+        
+        # Get predictions
+        y_pred_probs = model.predict(X_test, verbose=0)
+        y_pred_prob_positive = y_pred_probs[:, 1]
+        
+        # Calculate Precision-Recall curve
+        precision, recall, _ = precision_recall_curve(y_test, y_pred_prob_positive)
+        avg_precision = average_precision_score(y_test, y_pred_prob_positive)
+        
+        return jsonify({
+            'precision': precision.tolist(),
+            'recall': recall.tolist(),
+            'avg_precision': float(avg_precision)
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     print("[INFO] Loading models...")
