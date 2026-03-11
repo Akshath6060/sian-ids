@@ -9,11 +9,11 @@ X_raw = df['sequence']
 y = df['label'].values
 
 # Create vectorizer
-vectorizer = TfidfVectorizer(analyzer='word', ngram_range=(2, 2), max_features=150)
+vectorizer = TfidfVectorizer(token_pattern=r"(?u)\b\w+\b", ngram_range=(2, 3), max_features=200)
 X_tfidf = vectorizer.fit_transform(X_raw).toarray()
 
 # Create selector
-selector = SelectKBest(chi2, k=150)
+selector = SelectKBest(chi2, k=180)
 X_selected = selector.fit_transform(X_tfidf, y)
 
 print('TF-IDF shape:', X_tfidf.shape)

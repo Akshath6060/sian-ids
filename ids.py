@@ -45,9 +45,9 @@ y = df["label"].values
 print("\n[INFO] Performing TF-IDF Vectorization...")
 
 vectorizer = TfidfVectorizer(
-    analyzer='word',
-    ngram_range=(1, 3),  # Include 1-grams, 2-grams, and 3-grams for better patterns
-    max_features=300  # Increased from 200 for more features
+    token_pattern=r"(?u)\b\w+\b",
+    ngram_range=(2, 3), 
+    max_features=200 
 )
 
 X_tfidf = vectorizer.fit_transform(X_raw).toarray()
@@ -59,10 +59,11 @@ X_tfidf = vectorizer.fit_transform(X_raw).toarray()
 
 print("[INFO] Performing Chi-Square Feature Selection...")
 
-selector = SelectKBest(chi2, k=200)  # Increased from 180
+selector = SelectKBest(chi2, k=180) 
 X_selected = selector.fit_transform(X_tfidf, y)
 
 feature_names = vectorizer.get_feature_names_out()
+feature_names = feature_names[selector.get_support()]
 
 
 # ============================================
@@ -81,32 +82,32 @@ X_train, X_test, y_train, y_test = train_test_split(
 print("[INFO] Training MLP IDS Model...")
 
 model = Sequential()
-# Input layer with regularization
-model.add(Dense(512, activation='relu', input_shape=(200,), kernel_regularizer=regularizers.l2(0.0001)))
+# Input layer
+model.add(Dense(256, activation='relu', input_shape=(180,), kernel_regularizer=regularizers.l2(0.0001)))
 model.add(BatchNormalization())
-model.add(Dropout(0.25))
+model.add(Dropout(0.3))
 
-# Hidden layers with increasing capacity
-model.add(Dense(256, activation='relu', kernel_regularizer=regularizers.l2(0.0001)))
-model.add(BatchNormalization())
-model.add(Dropout(0.25))
-
+# Hidden layers
 model.add(Dense(128, activation='relu', kernel_regularizer=regularizers.l2(0.0001)))
+model.add(BatchNormalization())
+model.add(Dropout(0.3))
+
+model.add(Dense(96, activation='relu', kernel_regularizer=regularizers.l2(0.0001)))
 model.add(BatchNormalization())
 model.add(Dropout(0.2))
 
 model.add(Dense(64, activation='relu', kernel_regularizer=regularizers.l2(0.0001)))
 model.add(BatchNormalization())
-model.add(Dropout(0.15))
+model.add(Dropout(0.2))
 
 model.add(Dense(32, activation='relu', kernel_regularizer=regularizers.l2(0.0001)))
-model.add(Dropout(0.1))
+model.add(Dropout(0.15))
 
 # Output layer
 model.add(Dense(2, activation='softmax'))
 
 model.compile(
-    optimizer=Adam(learning_rate=0.001),  # Adjusted learning rate
+    optimizer=Adam(learning_rate=0.0005), 
     loss='sparse_categorical_crossentropy',
     metrics=['accuracy']
 )
@@ -116,7 +117,7 @@ early_stop = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights
 
 # Train with history tracking
 print("[INFO] Training MLP IDS Model...")
-history = model.fit(X_train, y_train, epochs=100, batch_size=32, verbose=1, 
+history = model.fit(X_train, y_train, epochs=50, batch_size=16, verbose=1, 
           validation_split=0.2, callbacks=[early_stop])
 
 # Save history for visualization
